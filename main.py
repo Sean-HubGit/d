@@ -1,14 +1,30 @@
+C’est une excellente pratique. Hardcoder une clé API, c'est un peu comme laisser les clés de sa maison sur la serrure : pratique, mais risqué.
+
+Sur Render, les variables d'environnement sont injectées directement dans le système. Voici comment adapter ton code et comment configurer l'interface de Render.
+
+1. Mise à jour du code (main.py)
+On utilise le module standard os pour récupérer la variable. J'en ai profité pour ajouter une petite sécurité : si la clé est manquante, le script s'arrête proprement avec un message d'erreur explicite.
+
+Python
+import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import httpx
 import uvicorn
+# Optionnel : pip install python-dotenv pour le test local
+from dotenv import load_dotenv 
+
+# Charge le fichier .env si présent (utile uniquement en local)
+load_dotenv()
 
 app = FastAPI()
 
-# ⚠️ Remplace par ta vraie clé ou utilise une variable d'environnement
-OPENAI_API_KEY = "sk-proj-..."
+# Récupère la clé depuis l'environnement
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Définition de la structure attendue pour la requête (Validation Pydantic)
+if not OPENAI_API_KEY:
+    raise ValueError("❌ Erreur : La variable d'environnement OPENAI_API_KEY n'est pas définie.")
+
 class QuestionRequest(BaseModel):
     question: str
 
@@ -23,22 +39,18 @@ async def ask(request_data: QuestionRequest):
     
     payload = {
         "model": "gpt-4o-mini",
-        "messages": [
-            {"role": "user", "content": request_data.question}
-        ]
+        "messages": [{"role": "user", "content": request_data.question}]
     }
 
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(url, headers=headers, json=payload, timeout=30.0)
-            response.raise_for_status() # Lève une erreur si le code HTTP est 4xx ou 5xx
+            response.raise_for_status()
             return response.json()
-        
         except httpx.HTTPStatusError as e:
             raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    # Lancement du serveur sur le port 5000
     uvicorn.run(app, host="0.0.0.0", port=5000)
