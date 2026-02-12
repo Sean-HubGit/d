@@ -1,11 +1,3 @@
-C’est une excellente pratique. Hardcoder une clé API, c'est un peu comme laisser les clés de sa maison sur la serrure : pratique, mais risqué.
-
-Sur Render, les variables d'environnement sont injectées directement dans le système. Voici comment adapter ton code et comment configurer l'interface de Render.
-
-1. Mise à jour du code (main.py)
-On utilise le module standard os pour récupérer la variable. J'en ai profité pour ajouter une petite sécurité : si la clé est manquante, le script s'arrête proprement avec un message d'erreur explicite.
-
-Python
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
